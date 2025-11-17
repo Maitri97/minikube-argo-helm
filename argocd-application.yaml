@@ -1,0 +1,17 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: demo-app
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Maitri97/minikube-argo-helm.git ## Url for helm chart in the git repo
+    targetRevision: HEAD
+    path: nginx ## Path for the helm chart
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: demo-app
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
