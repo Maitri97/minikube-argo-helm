@@ -1,4 +1,4 @@
-# Minikube + ArgoCD + Helm Demo (Version 10)
+# Minikube + ArgoCD + Helm Demo (Version 11)
 
 This project is a small, practical setup that installs **Minikube**, **ArgoCD**, 
 and deploys a simple **NGINX Helm chart** automatically. It was built to create 
@@ -13,30 +13,34 @@ ArgoCD locally and see a real Helm deployment in action with minimal manual comm
 
 When you run:
 
-```
+```bash
 python3 startup.py
 ```
 
 The project:
 
 1. **Detects your OS (Linux/macOS/Windows)**  
-2. **Installs tools** if needed (Linux/macOS auto-install; Windows uses Chocolatey)
-3. **Starts Minikube**
-4. **Installs ArgoCD**
-5. **Creates `demo-app` namespace**
-6. **Applies ArgoCD Application YAML**
-7. **Waits until the demo NGINX pod is Running**
-8. **Prints ArgoCD admin credentials**
-9. **Gives port-forward commands** for:
+2. **Installs tooling if needed**  
+   - Linux/macOS → curl installers  
+   - Windows → Chocolatey + choco packages  
+3. **Starts Minikube** with Docker driver  
+4. **Installs ArgoCD**  
+5. **Creates the `demo-app` namespace**  
+6. **Deploys the Helm chart via ArgoCD**  
+7. **Waits until the demo NGINX pod is Running**  
+8. **Prints ArgoCD admin credentials**  
+9. **Automatically starts background port-forwards** for:  
    - ArgoCD UI → https://localhost:8080  
-   - NGINX App → http://localhost:8081  
+   - Demo NGINX App → http://localhost:8081  
+10. **Prints instructions on how to stop port-forwards** per OS  
+11. **Displays a security warning** about keeping port-forwards running
 
 ---
 
 # 📁 Project Structure
 
-```
-minikube-argo-helm-project-v10/
+```text
+minikube-argo-helm-project-v11/
 ├── startup.py
 ├── argocd-application.yaml
 ├── .gitignore
@@ -44,7 +48,8 @@ minikube-argo-helm-project-v10/
 │   ├── common_functions.py
 │   ├── linux_setup.py
 │   ├── windows_setup.py
-│   ├── argocd_port_forward.py
+│   ├── cluster_setup.py
+│   ├── port_forwarder.py
 │   └── cleanup.py
 ├── nginx/
 │   ├── Chart.yaml
@@ -61,8 +66,7 @@ minikube-argo-helm-project-v10/
 # 🧩 Prerequisites
 
 ### ✔ Docker  
-You must install Docker Desktop:
-
+Install Docker Desktop:  
 https://www.docker.com/products/docker-desktop/
 
 ### ✔ Python 3.7+
@@ -70,143 +74,187 @@ https://www.docker.com/products/docker-desktop/
 ### ✔ Linux / macOS / Windows 10+
 
 ### ✔ Chocolatey (Windows only)  
-If not installed, the script will install it automatically.
+Automatically installed if missing.
 
 ---
 
 # ▶️ How To Run
 
-### **Linux / macOS**
-```
+### Linux / macOS
+```bash
 python3 startup.py
 ```
 
-### **Windows**
-```
+### Windows
+```powershell
 python startup.py
 ```
 
-The script handles everything automatically.
+Script handles all setup steps automatically.
 
 ---
 
 # 🔑 Accessing ArgoCD
 
-### Port-forward:
-```
-kubectl port-forward svc/argocd-server -n argocd 8080:443
-```
+ArgoCD is automatically port-forwarded in the background.
 
-### Open in browser:
+### UI:
 ```
 https://localhost:8080
 ```
 
 ### Login:
 - **Username:** admin  
-- **Password:** printed by the script  
+- **Password:** printed by the script (read from ArgoCD secret)
 
 ---
 
 # 🌐 Accessing the Demo Application
 
-Since the Service is **ClusterIP**, it is accessed using port-forward:
-
-```
-kubectl port-forward svc/demo-app -n demo-app 8081:80
-```
-
-Open:
+Also automatically port-forwarded to:
 
 ```
 http://localhost:8081
 ```
 
-This shows the NGINX page deployed by ArgoCD using the Helm chart.
+Shows the NGINX page deployed via Helm + ArgoCD.
+
+---
+
+# 🌀 Background Port-Forward Behavior
+
+The script uses **subprocess.Popen** to run two background port-forwards:
+
+```
+ArgoCD UI → 8080:443
+Demo App  → 8081:80
+```
+
+You will see output like:
+
+```
+Background port-forwards started:
+  ArgoCD UI PID:    12345
+  Demo App PID:     12346
+```
+
+---
+
+# 🛑 How To Stop Background Port-Forwards
+
+### macOS / Linux
+```bash
+kill <PID_OF_ARGOCD>
+kill <PID_OF_DEMO_APP>
+```
+
+If you lost the PIDs:
+```bash
+pkill -f "kubectl port-forward"
+```
+
+---
+
+### Windows (PowerShell or CMD)
+
+```powershell
+taskkill /PID <PID_OF_ARGOCD> /F
+taskkill /PID <PID_OF_DEMO_APP> /F
+```
+
+Or stop via Task Manager by searching for these PIDs.
+
+---
+
+# ⚠️ Security Warning
+
+Port-forwards expose cluster services on:
+
+- `localhost:8080` → ArgoCD  
+- `localhost:8081` → Demo App  
+
+If left running:
+
+- Browser extensions  
+- Local scripts  
+- Developer tools  
+
+**could access your cluster without your knowledge.**
+
+Always stop port-forwards after testing.
 
 ---
 
 # 🧹 Cleanup
 
-Run:
+To clean demo resources or delete the Minikube cluster:
 
 ```
 python3 -m scripts.cleanup
 ```
 
-This will:
+This deletes:
 
-- Delete ArgoCD Application  
-- Delete resources defined in the Application  
-- Delete namespaces `demo-app` and `argocd`  
-- Ask whether to delete the Minikube cluster  
+- ArgoCD Application  
+- Resources created by `argocd-application.yaml`  
+- `argocd` and `demo-app` namespaces  
+- (Optional) Minikube cluster  
 
-No tools (kubectl, helm, minikube) are removed automatically.
+If Minikube delete fails:
 
----
-
-# ⚠️ Constraints & Assumptions
-
-These are intentionally simple to keep the scripts readable:
-
-### ✔ Designed for **local testing only**  
-Not production-grade configuration.
-
-### ✔ Namespace is fixed to `demo-app`  
-For predictable behavior during the demo.
-
-### ✔ No TLS/Ingress for NGINX app  
-The demo shows only basic functionality.
-
-### ✔ Minikube starts with default resources  
-The script uses standard Minikube defaults.
-
-### ✔ Windows-specific installs handled via Chocolatey  
-To keep behavior consistent across OS types.
+```
+minikube delete --all --purge
+```
 
 ---
 
-# 🔧 Possible Improvements (Scoped to Minikube, Scripts & ArgoCD Only)
+# ⚙️ Constraints & Assumptions
 
-- Add option to specify a different namespace or Helm path at runtime.
-- Allow switching between NodePort and ClusterIP for the demo Service.
-- Add basic verification that ArgoCD Application has synced successfully.
-- Add uninstall flags for kubectl, minikube, and helm if user wants them removed.
-- Add support for running multiple demo apps (multi-Application support).
+- Simple configuration intended for **local testing only**  
+- Fixed `demo-app` namespace for predictable behavior  
+- Demo Service is **ClusterIP** (port-forward required)  
+- No TLS/Ingress  
+- Minikube uses default resource settings  
+- Windows installs use Chocolatey for consistency  
 
-(These are intentionally scoped to your requirement.)
+---
+
+# 🔧 Possible Improvements
+
+- CLI flags for namespace / Helm chart path  
+- Customizable port-forward ports  
+- Add an option to disable auto port-forward  
+- Basic Application Sync verification  
+- Support multiple demo apps  
+- More descriptive NGINX homepage  
 
 ---
 
 # 🛠️ How This Was Built
 
-This project reflects the approach I personally take when building internal 
-DevOps tooling:
+This project is built using a DevOps-first approach:
 
-- Automate repetitive setup steps  
-- Keep scripts clear, readable, and self-explanatory  
-- Use standard tools (kubectl, helm, minikube, choco)  
-- Keep configuration declarative where possible (Helm + ArgoCD)
+- Automate everything end-to-end  
+- Keep scripts simple, explainable, and easy to follow  
+- Use declarative deployment (Helm + ArgoCD)  
+- Provide cross-platform setup (Linux/macOS/Windows)  
+- Include cleanup and background process handling  
 
-A GPT-based coding assistant was used to help draft and refine file structures, 
-YAML manifests, and Python scripting.  
-However, the overall architecture, sequence of steps, tool choices, and final 
-validation were done by me so that I can explain any part of the project 
-in detail during an interview or demo.
+A GPT coding assistant helped draft scripting and YAML structures,  
+but the flow, architecture, decisions, troubleshooting, and validations 
+were done by me so I can explain each part clearly during an interview.
 
 ---
 
 # 🎯 Summary
 
-This project gives a **hands-on, fully automated GitOps demo** using:
+This project provides a **fully automated GitOps demo** using:
 
 - Minikube  
 - ArgoCD  
 - Helm  
-- Kubernetes basics  
-- Simple port-forwarding for app/UI  
-- Clean Python scripting for cross-platform setup  
+- Cross-platform Python scripting  
+- Background port-forward handling  
+- Cleanup automation  
 
-It's built to be simple to use, easy to present, and useful as a practical 
-POC for GitOps discussions.
-
+It is ideal for interviews, workshops, and personal GitOps experimentation.
