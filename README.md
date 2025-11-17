@@ -242,7 +242,7 @@ This project is built using a DevOps-first approach:
 
 A GPT coding assistant helped draft scripting and YAML structures,  
 but the flow, architecture, decisions, troubleshooting, and validations 
-were done by me so I can explain each part clearly during an interview.
+were done by me so I can explain each part clearly during a demo.
 
 ---
 
