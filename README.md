@@ -85,7 +85,7 @@ Automatically installed if missing.
 python3 startup.py
 ```
 
-### Windows
+### Windows (Make sure you run this as an administrator)
 ```powershell
 python startup.py
 ```
