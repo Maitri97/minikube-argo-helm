@@ -1,4 +1,4 @@
-# Minikube + ArgoCD + Helm Demo (Version 11)
+# Minikube + ArgoCD + Helm Demo 
 
 This project is a small, practical setup that installs **Minikube**, **ArgoCD**, 
 and deploys a simple **NGINX Helm chart** automatically. It was built to create 
