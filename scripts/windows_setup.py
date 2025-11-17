@@ -26,7 +26,7 @@ def install_tools():
     print("Installing kubectl, Minikube, Helm via Chocolatey...")
     run_cmd_and_exit_on_error(["choco", "install", "kubernetes-cli", "-y"])
     run_cmd_and_exit_on_error(["choco", "install", "minikube", "-y"])
-    run_cmd_and_exit_on_error(["choco", "install", "helm", "-y"])
+    run_cmd_and_exit_on_error(["choco", "install", "kubernetes-helm", "-y"])
 
 def main():
     ensure_docker_running()
